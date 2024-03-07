@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Book & Music Recommender</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+        }
+
+        form {
+            margin-top: 20px;
+        }
+
+        #output {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Book & Music Recommender</h1>
+    <form id="recommendForm">
+        <label for="userInput">Enter your preference:</label>
+        <input type="text" id="userInput" name="userInput" required>
+        <select name="category" required>
+            <option value="books">Books</option>
+            <option value="music">Music</option>
+        </select>
+        <button type="button" onclick="recommend()">Get Recommendations</button>
+    </form>
+    <div id="output"></div>
+
+    <script>
+        function recommend() {
+            const userInput = document.getElementById('userInput').value;
+            const category = document.querySelector('select[name="category"]').value;
+
+            fetch('/recommend', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `user_input=${userInput}&category=${category}`,
+            })
+            .then(response => response.json())
+            .then(data => {
+                const outputDiv = document.getElementById('output');
+                outputDiv.innerHTML = `<p>Recommendations: ${data.recommendations.join(', ')}</p>`;
+            })
+            .catch(error => console.error('Error:', error));
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,79 @@
+import streamlit as st
+import pandas as pd
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import linear_kernel
+import random
+
+# Load the Kaggle datasets
+kaggle_books_path = 'C:/Users/MIKHIL/OneDrive/Desktop/Projects/Bookmusic recommd/Bookmusic recommd/books.csv'
+kaggle_music_path = 'C:/Users/MIKHIL/OneDrive/Desktop/Projects/Bookmusic recommd/Bookmusic recommd/music.csv'
+
+try:
+    kaggle_books_df = pd.read_csv(kaggle_books_path)
+    kaggle_music_df = pd.read_csv(kaggle_music_path)
+except pd.errors.ParserError as e:
+    st.error(f"Error parsing CSV file: {e}")
+    st.stop()
+
+# Function to get book recommendations based on emotion
+def get_book_recommendations(emotion):
+    emotion_df = kaggle_books_df[kaggle_books_df['Emotion'] == emotion]
+    return emotion_df['title'].tolist()
+
+# Function to get music recommendation based on emotion
+def get_music_recommendation(emotion):
+    emotion_music_df = kaggle_music_df[kaggle_music_df['Emotion'] == emotion]
+    return emotion_music_df[['artist_name', 'track_name']].to_dict(orient='records')
+
+# Function to get content-based recommendations based on description similarity
+def get_content_based_recommendations(selected_book):
+    tfidf_vectorizer = TfidfVectorizer(stop_words="english")
+    tfidf_matrix = tfidf_vectorizer.fit_transform(kaggle_books_df['description'].fillna(''))
+
+    book_index = kaggle_books_df[kaggle_books_df['title'] == selected_book].index[0]
+    cosine_similarities = linear_kernel(
+        tfidf_matrix[book_index], tfidf_matrix
+    ).flatten()
+    similar_books_indices = cosine_similarities.argsort()[:-4:-1]
+
+    recommended_books = [
+        kaggle_books_df.iloc[i]['title'] for i in similar_books_indices[1:]
+    ]  # Exclude the selected book
+    return recommended_books
+
+# Streamlit UI
+st.title("Rhythmic Reads Hub Chatbot")
+
+# Let's use st.text_input to simulate a chat input
+user_input = st.text_input("You: Type 'Books'").lower()
+
+if "book" in user_input:
+    # Allow the user to select the emotion
+    selected_emotion = st.radio("Select Book Emotion:", kaggle_books_df['Emotion'].unique(), index=None)
+
+    # Get recommended books based on the selected emotion
+    recommended_books = get_book_recommendations(selected_emotion)
+
+    # Provide recommended books based on the selected emotion
+    st.write("Recommended Books:")
+
+    # Check if there are enough books to sample
+    if len(recommended_books) >= 5:
+        # Sample 5 random books
+        sampled_books = random.sample(recommended_books, 5)
+
+        # Display sampled books
+        for book in sampled_books:
+            st.write(book)
+
+        # Get music recommendation based on the selected emotion
+        music_recommendation = get_music_recommendation(selected_emotion)
+
+        # Display music recommendation
+        st.write("Music Recommendation:")
+        sampled_music = random.sample(music_recommendation, 5)
+        for music_track in sampled_music:
+            st.write(f"{music_track['artist_name']} - {music_track['track_name']}")
+
+    else:
+        st.warning("Select which type of book you want to read.")
